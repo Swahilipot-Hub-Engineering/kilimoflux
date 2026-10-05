@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KilimoFlux — Smart Agriculture Platform (IoT • Satellite • AI)</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans">
+
+  <!-- Header -->
+  <header class="bg-slate-900/90 backdrop-blur border-b border-emerald-500/20 px-4 py-3 sticky top-0 z-50 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-lime-400 flex items-center justify-center text-slate-950 font-bold text-xl shadow-lg shadow-emerald-500/20">
+        <i class="ph-bold ph-plant text-2xl"></i>
+      </div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <h1 class="font-extrabold text-lg text-emerald-400 tracking-tight">KilimoFlux</h1>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-medium">IoT • Satellite • AI</span>
+        </div>
+        <p class="text-xs text-slate-400">Swahilipot Hub Engineering — Kenya Open Smart Agriculture</p>
+      </div>
+    </div>
+
+    <!-- Farm Selector & Live Pill -->
+    <div class="flex items-center space-x-3">
+      <div class="flex items-center space-x-2 bg-slate-800/80 rounded-lg px-3 py-1.5 border border-slate-700">
+        <i class="ph-bold ph-map-pin text-emerald-400"></i>
+        <label for="farmSelect" class="text-xs text-slate-400 font-medium">Farm:</label>
+        <select id="farmSelect" class="bg-transparent text-xs font-semibold text-slate-200 focus:outline-none cursor-pointer">
+          <option value="farm-kilifi-01">Kilifi Coastal Shamba (Pwani)</option>
+          <option value="farm-naivasha-02">Naivasha Greenhouse (Nakuru)</option>
+          <option value="farm-eldoret-03">Eldoret Grain Shamba (Uasin Gishu)</option>
+        </select>
+      </div>
+
+      <div class="flex items-center space-x-1.5 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-400">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="liveStatus">LoRaWAN Online</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Top Metrics Bar -->
+  <section class="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-slate-900/50 border-b border-slate-800">
+    <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60 flex items-center space-x-3">
+      <div class="p-2.5 rounded-lg bg-blue-500/10 text-blue-400 text-2xl">
+        <i class="ph-fill ph-drop"></i>
+      </div>
+      <div>
+        <p class="text-xs text-slate-400">Mean Soil Moisture (VWC)</p>
+        <p id="metricVwc" class="text-lg font-bold text-slate-100">26.8%</p>
+        <p class="text-[10px] text-emerald-400">Target: 25% - 40%</p>
+      </div>
+    </div>
+
+    <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60 flex items-center space-x-3">
+      <div class="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-400 text-2xl">
+        <i class="ph-fill ph-chart-line-up"></i>
+      </div>
+      <div>
+        <p class="text-xs text-slate-400">Sentinel-2 NDVI Vigor</p>
+        <p id="metricNdvi" class="text-lg font-bold text-emerald-400">0.75 (Vigorous)</p>
+        <p class="text-[10px] text-slate-400">NDWI: +0.22 (Optimal)</p>
+      </div>
+    </div>
+
+    <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60 flex items-center space-x-3">
+      <div class="p-2.5 rounded-lg bg-amber-500/10 text-amber-400 text-2xl">
+        <i class="ph-fill ph-faucet"></i>
+      </div>
+      <div>
+        <p class="text-xs text-slate-400">Automated Valves</p>
+        <p id="metricValves" class="text-lg font-bold text-slate-100">0 / 2 Active</p>
+        <p class="text-[10px] text-slate-400">Class C LoRa Downlinks</p>
+      </div>
+    </div>
+
+    <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60 flex items-center space-x-3">
+      <div class="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-400 text-2xl">
+        <i class="ph-fill ph-cloud-rain"></i>
+      </div>
+      <div>
+        <p class="text-xs text-slate-400">24h Rain Forecast</p>
+        <p id="metricRain" class="text-lg font-bold text-slate-100">1.2 mm</p>
+        <p id="rainGatingStatus" class="text-[10px] text-emerald-400">Gating: Clear to irrigate</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content Layout -->
+  <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4">
+
+    <!-- Left: Interactive Leaflet Map (7 cols) -->
+    <div class="lg:col-span-7 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+      <div class="px-4 py-2.5 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
+        <div class="flex items-center space-x-2">
+          <i class="ph-bold ph-globe-hemisphere-east text-emerald-400"></i>
+          <span class="text-sm font-bold text-slate-200">Satellite Parcel Map & Sensor Nodes</span>
+        </div>
+        <div class="flex items-center space-x-2 text-xs">
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-emerald-500 inline-block"></span> Healthy NDVI (>0.5)</span>
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-amber-500 inline-block"></span> Moderate</span>
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-red-500 inline-block"></span> Stressed</span>
+        </div>
+      </div>
+      <div id="map" class="flex-1 min-h-[420px] w-full"></div>
+    </div>
+
+    <!-- Right: Precision Irrigation & Valve Control (5 cols) -->
+    <div class="lg:col-span-5 flex flex-col space-y-4">
+
+      <!-- AI Irrigation Recommendation Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center space-x-2">
+            <i class="ph-bold ph-brain text-emerald-400 text-lg"></i>
+            <h2 class="font-bold text-sm text-slate-100">FAO-56 Precision Irrigation Engine</h2>
+          </div>
+          <span class="text-xs text-slate-400">ETc = Kc × ET₀</span>
+        </div>
+
+        <div id="recommendationsContainer" class="mt-3 space-y-3">
+          <!-- Dynamic cards injected via app.js -->
+          <div class="animate-pulse flex space-x-4 p-3 bg-slate-800/40 rounded-xl">
+            <div class="flex-1 space-y-2 py-1">
+              <div class="h-3 bg-slate-700 rounded w-3/4"></div>
+              <div class="h-2 bg-slate-700 rounded w-1/2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick LoRa Downlink Valve Override -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex-1">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center space-x-2">
+            <i class="ph-bold ph-faucet text-blue-400 text-lg"></i>
+            <h2 class="font-bold text-sm text-slate-100">LoRaWAN Solenoid Valve Actuators</h2>
+          </div>
+          <span class="text-xs text-slate-400 font-mono">Class C</span>
+        </div>
+
+        <div id="valveList" class="mt-3 space-y-2.5">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom: AI Pest & Disease Diagnosis Scanner (Full width 12 cols) -->
+    <div class="lg:col-span-12 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+      <div class="flex flex-wrap items-center justify-between pb-3 border-b border-slate-800 gap-2">
+        <div class="flex items-center space-x-2">
+          <i class="ph-bold ph-bug text-red-400 text-lg"></i>
+          <div>
+            <h2 class="font-bold text-sm text-slate-100">AI Plant Pathology & Pest Diagnostic Scanner</h2>
+            <p class="text-xs text-slate-400">Computer vision leaf analysis & Integrated Pest Management (IPM) advisor</p>
+          </div>
+        </div>
+        <span class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">Trained on African Smallholder Pathogens</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mt-4">
+        <!-- Diagnostic Input Form (5 cols) -->
+        <div class="md:col-span-5 space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Crop Type</label>
+            <select id="diagCrop" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
+              <option value="MAIZE">Maize (Corn)</option>
+              <option value="TOMATO">Tomato</option>
+              <option value="CASSAVA">Cassava</option>
+              <option value="FRENCH_BEANS">French Beans</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Observed Symptoms / Quick Presets</label>
+            <div class="flex flex-wrap gap-1.5 mb-2">
+              <button type="button" class="preset-btn text-[10px] bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1 rounded" data-crop="MAIZE" data-symptoms="Ragged feeding holes in leaf whorls, sawdust-like frass">
+                🐛 Maize Fall Armyworm
+              </button>
+              <button type="button" class="preset-btn text-[10px] bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1 rounded" data-crop="TOMATO" data-symptoms="Water-soaked brown lesions on leaf tips, white mold underside">
+                🍄 Tomato Late Blight
+              </button>
+              <button type="button" class="preset-btn text-[10px] bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1 rounded" data-crop="CASSAVA" data-symptoms="Yellow mosaic pattern on leaves, leaf distortion">
+                🍃 Cassava Mosaic
+              </button>
+            </div>
+            <textarea id="diagNotes" rows="3" placeholder="Describe lesion shapes, leaf discolorations, insect frass or paste symptom notes..." class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"></textarea>
+          </div>
+
+          <button id="btnRunDiagnosis" class="w-full bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-bold py-2.5 rounded-lg text-xs flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20 transition-all">
+            <i class="ph-bold ph-scan text-base"></i>
+            <span>Run AI Pathogen Diagnosis</span>
+          </button>
+        </div>
+
+        <!-- Diagnostic Result Preview (7 cols) -->
+        <div class="md:col-span-7 bg-slate-950/60 border border-slate-800 rounded-xl p-4" id="diagOutput">
+          <div class="text-center py-8 text-slate-500">
+            <i class="ph-light ph-microscope text-4xl mb-2 text-slate-600"></i>
+            <p class="text-xs">Select a crop and symptom description above, or tap a sample preset to test diagnosis.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-slate-900 border-t border-slate-800 px-4 py-3 text-center text-xs text-slate-400 flex flex-wrap items-center justify-between gap-2">
+    <div>
+      <span>Developed by <strong>Swahilipot Hub Engineering Community</strong></span>
+      <span class="mx-2">•</span>
+      <span>Mombasa, Kenya</span>
+    </div>
+    <div class="flex items-center space-x-4">
+      <a href="https://github.com/Swahilipot-Hub-Engineering/kilimoflux" target="_blank" class="hover:text-emerald-400 flex items-center space-x-1">
+        <i class="ph-bold ph-github-logo"></i>
+        <span>GitHub Repository</span>
+      </a>
+      <a href="/api/v1/health" target="_blank" class="hover:text-emerald-400 flex items-center space-x-1">
+        <i class="ph-bold ph-activity"></i>
+        <span>API Health</span>
+      </a>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
